@@ -2,7 +2,7 @@
 
 A home lab that simulates the IT environment of a small company. I build and run it the way a help desk / IT support team would: a Windows domain, employee accounts, a ticketing system, automation with PowerShell, and documented troubleshooting.
 
-> **Status:** Lab setup complete. Phase 2 (Active Directory users & automation) in progress.
+> **Status:** Lab setup complete. Phase 2: OU structure, groups, and manual onboarding done; PowerShell automation next.
 
 ---
 
@@ -40,7 +40,7 @@ flowchart LR
 |---|---|---|
 | 0 | [Lab setup](docs/01-lab-setup.md): VMs, network, domain controller, domain join | ✅ Done |
 | 1 | GLPI service desk: ticket categories, priorities, SLAs, knowledge base | ⬜ Planned |
-| 2 | Active Directory: OUs, users, groups, Group Policy, PowerShell onboarding/offboarding | 🔄 Next |
+| 2 | [Active Directory](docs/02-active-directory.md): OUs, users, groups, Group Policy, PowerShell onboarding/offboarding | 🔄 In progress |
 | 3 | Ticket-driven operations: realistic tickets worked end to end | ⬜ Planned |
 | 4 | Backup, failure & restore: measured recovery against a target time | ⬜ Planned |
 
@@ -49,6 +49,7 @@ flowchart LR
 ## Documentation
 
 - [Lab setup guide](docs/01-lab-setup.md): how the environment was built, step by step
+- [Active Directory](docs/02-active-directory.md): OU design, security groups, and employee onboarding
 - [Troubleshooting log](docs/troubleshooting-log.md): problems I hit and how I fixed them
 
 ---
@@ -60,6 +61,8 @@ flowchart LR
 - Static IP addressing and DNS
 - Active Directory Domain Services: creating a forest and promoting a domain controller
 - Joining a Windows 11 client to a domain
+- Designing an OU structure and role-based security groups
+- Onboarding users in Active Directory Users and Computers and verifying access with `whoami /groups`
 - Troubleshooting with `systeminfo`, `bcdedit`, `nslookup`, and Event Viewer
 
 ---
