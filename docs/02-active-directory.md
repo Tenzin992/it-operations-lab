@@ -120,4 +120,10 @@ Signed in to CLIENT01 as `LAB\jsmith`:
 
 ## Part 2: PowerShell onboarding automation
 
-*Coming next.*
+**Script:** [`scripts/New-Employee.ps1`](../scripts/New-Employee.ps1)
+
+### What I built and learned
+
+I wrote a PowerShell script that onboards a new employee: it builds the username from their name, creates the account in their department’s OU with a temporary password, and adds them to the department’s security group. While testing, I found that the script reported success even when it failed, for example when the user already existed or the department was misspelled, and one error caused a chain of other errors. I fixed this by adding input validation with if statements: the script now checks that the department is valid and that the username isn’t taken before creating anything, and stops with a clear error message if not. I also learned how to read PowerShell errors (fix the first one), why -Filter works better than -Identity for checks, and that variables only expand inside double quotes.
+
+*Next: bulk onboarding from a CSV file.*
