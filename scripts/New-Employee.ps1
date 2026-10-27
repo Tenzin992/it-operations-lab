@@ -2,12 +2,12 @@
 # Creates a new LabCorp employee account in the right OU and group.
 
 # ---- Fill these in for each new hire ----
-$FirstName  = "Thomas"
+$FirstName  = "Alex"
 $LastName   = "Peters"
-$Department = "Security"        # Must be IT, HR, Sales, or Finance
+$Department = "IT"        # Must be IT, HR, Sales, or Finance
 # ------------------------------------------
 
-#Stop if the department isn't one we have
+# Stop if the department isn't one we have
 $ValidDepartments = "IT", "HR", "Sales", "Finance"
 
 if ($Department -notin $ValidDepartments) {
