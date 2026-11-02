@@ -126,4 +126,54 @@ Signed in to CLIENT01 as `LAB\jsmith`:
 
 I wrote a PowerShell script that onboards a new employee: it builds the username from their name, creates the account in their department’s OU with a temporary password, and adds them to the department’s security group. While testing, I found that the script reported success even when it failed, for example when the user already existed or the department was misspelled, and one error caused a chain of other errors. I fixed this by adding input validation with if statements: the script now checks that the department is valid and that the username isn’t taken before creating anything, and stops with a clear error message if not. I also learned how to read PowerShell errors (fix the first one), why `-Filter` works better than `-Identity` for checks, and that variables only expand inside double quotes.
 
-*Next: bulk onboarding from a CSV file.*
+---
+
+## Part 3: Bulk onboarding from a CSV
+
+**Script:** [`scripts/Import-Employees.ps1`](../scripts/Import-Employees.ps1)
+**Sample input:** [`scripts/new-hires.csv`](../scripts/new-hires.csv)
+
+HR usually sends new hires as a spreadsheet. This script reads a CSV file and runs the onboarding steps once per row using a `foreach` loop. Invalid rows are skipped with `continue` instead of stopping the whole batch.
+
+**Test run** (six rows, including two deliberate mistakes):
+
+| Row | Result |
+|---|---|
+| Aisha Khan, Tom Nguyen, Sara Lopez, David Chen | ✅ Created in their department OU and group |
+| Jane Smith | ⚠️ Skipped: username already exists |
+| Emily Brooks (Marketing) | ❌ Skipped: invalid department |
+
+### What I learned
+
+Instead of running the single-user script once per new hire, I turned it into a loop that reads every row of a CSV file, the format HR would actually send. My first version had a bug: I closed the `foreach` loop's brace right after setting the variables, so only those three lines repeated and the account-creation steps ran just once, using the last row. I learned that only the code between `{` and `}` repeats. I also learned the difference between `exit`, which stops the whole script, and `continue`, which skips the current row and moves on to the next one. That way one bad row doesn't stop the whole batch. In my test, four valid hires were created, and the duplicate and invalid-department rows were skipped with clear, color-coded messages.
+
+---
+
+## Part 4: Offboarding
+
+**Script:** [`scripts/Disable-Employee.ps1`](../scripts/Disable-Employee.ps1)
+
+When an employee leaves, the account is **disabled, not deleted**, so it can be restored if needed and its SID and history are kept. The script:
+
+1. Stops if the username doesn't exist
+2. Disables the account
+3. Removes all group memberships except Domain Users
+4. Adds a dated note to the Description field
+5. Moves the account to the `Disabled Users` OU
+
+**Before and after offboarding Mike Lee:**
+
+| | Before | After |
+|---|---|---|
+| Enabled | True | **False** |
+| OU | `Employees\Sales` | `Disabled Users` |
+| Groups | Sales-Staff | *(none)* |
+| Description | *(empty)* | `Disabled 2026-11-02 - left company` |
+
+![Offboarding before and after](../screenshots/p2-05-offboarding-before-after.png)
+
+Running it with a username that doesn't exist stops with *"User 'nobody' not found. No changes made."*
+
+### What I learned
+
+Offboarding matters for security, because a former employee's active account is a common way attackers get in. Companies disable accounts instead of deleting them because deletion can't be undone, and the account's history, files, and permissions may still be needed for audits or if the person returns. After offboarding Mike Lee, his SID, GUID, and username stayed the same, so he could be re-enabled with everything tied to his account intact. The script checks that the user exists before doing anything, so a typo in the username stops it with a clear message instead of a chain of errors. I also learned to verify changes with a before-and-after comparison, using `Get-ADUser -Properties` to show fields like Description and MemberOf.
