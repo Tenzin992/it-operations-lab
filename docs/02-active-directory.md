@@ -177,3 +177,64 @@ Running it with a username that doesn't exist stops with *"User 'nobody' not fou
 ### What I learned
 
 Offboarding matters for security, because a former employee's active account is a common way attackers get in. Companies disable accounts instead of deleting them because deletion can't be undone, and the account's history, files, and permissions may still be needed for audits or if the person returns. After offboarding Mike Lee, his SID, GUID, and username stayed the same, so he could be re-enabled with everything tied to his account intact. The script checks that the user exists before doing anything, so a typo in the username stops it with a clear message instead of a chain of errors. I also learned to verify changes with a before-and-after comparison, using `Get-ADUser -Properties` to show fields like Description and MemberOf.
+
+---
+
+## Part 5: Group Policy
+
+**Goal:** lock any company workstation automatically after 5 minutes of inactivity, so an unattended computer can't be used by someone else.
+
+**GPO:** `Workstation Screen Lock`, linked to `LabCorp\Workstations`
+
+| Setting | Location | Value |
+|---|---|---|
+| Interactive logon: Machine inactivity limit | Computer Configuration → Policies → Windows Settings → Security Settings → Local Policies → Security Options | 300 seconds |
+
+I used **Computer Configuration** because the GPO is linked to an OU of computers, so the setting applies no matter who signs in.
+
+**Verified on CLIENT01:**
+- `gpupdate /force` to pull the new policy immediately instead of waiting for the ~90-minute refresh
+- `gpresult /r /scope computer` lists **Workstation Screen Lock** under *Applied Group Policy Objects*
+- After a restart, CLIENT01 locked itself after 5 minutes idle while signed in as a standard user (Jane)
+
+![gpresult showing the applied GPO](../screenshots/p2-06-gpresult-screen-lock.png)
+
+### What I learned
+
+A GPO is a bundle of settings that applies to every user or computer in the OU it's linked to. This is why I moved CLIENT01 out of the built-in Computers container: Group Policy can't be linked to containers. Computers pull policy at startup and about every 90 minutes, and `gpupdate /force` makes it happen right away. `gpresult` shows which GPOs actually applied, which is the first thing to check when a setting "isn't working." Some security settings only take effect after a restart. The gpresult output also showed `CLIENT01$`, the computer's own account in Active Directory.
+
+---
+
+## Part 6: Shared folder with group-based access
+
+**Goal:** an HR shared folder that only members of `HR-Staff` can open.
+
+**Share:** `\\DC01\HR` (folder `C:\Shares\HR`)
+
+Windows checks two layers of permissions on a network share, and the stricter one wins:
+
+| Layer | Setting | Purpose |
+|---|---|---|
+| Share permissions | Authenticated Users: Full Control | Lets any signed-in user *reach* the share |
+| NTFS permissions | `HR-Staff`: Modify (inheritance disabled, `Users` removed) | Controls who actually gets *in* |
+
+Keeping share permissions open and restricting with NTFS keeps all access control in one place.
+
+**Test results from CLIENT01:**
+
+| User | Department | Result |
+|---|---|---|
+| Jane Smith (`jsmith`) | HR | ✅ Opened the share and created a file |
+| Sara Lopez (`slopez`) | IT | ❌ "You do not have permission to access \\DC01\HR" |
+
+![HR member can access the share](../screenshots/p2-07-share-hr-allowed.png)
+
+![IT member is denied](../screenshots/p2-08-share-it-denied.png)
+
+### What I learned
+
+This is where groups finally made full sense: access is granted to the `HR-Staff` group, never to individual users, so giving or removing access is just a group membership change. A share has two permission layers, share and NTFS, and the stricter one applies. I disabled inheritance so the folder stopped copying the parent's "Users" permission, which would have let everyone in. If someone needs access, it should be approved by the folder's owner (least privilege), and after being added to the group the user must sign out and back in, because group memberships are read at sign-in. I also practiced a real help desk task when Jane's password was forgotten: resetting it in ADUC with "must change at next logon."
+
+---
+
+**Phase 2 complete.** Next: GLPI service desk.
