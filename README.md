@@ -2,7 +2,7 @@
 
 A home lab that simulates the IT environment of a small company. I build and run it the way a help desk / IT support team would: a Windows domain, employee accounts, a ticketing system, automation with PowerShell, and documented troubleshooting.
 
-> **Status:** Lab setup complete. Phase 2: OU structure, groups, and manual onboarding done; PowerShell automation next.
+> **Status:** Lab setup and Active Directory phases complete. GLPI service desk next.
 
 ---
 
@@ -40,16 +40,22 @@ flowchart LR
 |---|---|---|
 | 0 | [Lab setup](docs/01-lab-setup.md): VMs, network, domain controller, domain join | ✅ Done |
 | 1 | GLPI service desk: ticket categories, priorities, SLAs, knowledge base | ⬜ Planned |
-| 2 | [Active Directory](docs/02-active-directory.md): OUs, users, groups, Group Policy, PowerShell onboarding/offboarding | 🔄 In progress |
+| 2 | [Active Directory](docs/02-active-directory.md): OUs, groups, PowerShell onboarding/offboarding, Group Policy, shared folder permissions | ✅ Done |
 | 3 | Ticket-driven operations: realistic tickets worked end to end | ⬜ Planned |
 | 4 | Backup, failure & restore: measured recovery against a target time | ⬜ Planned |
+| 5 | Microsoft 365 / Entra ID: cloud identity basics, MFA, licenses, syncing lab users to the cloud | ⬜ Planned |
+| 6 | AI-assisted help desk: ticket triage and approved script actions, with a human in the loop | ⬜ Planned |
+
+Build order: 0 → 2 → 1 → 3 → 5 → 6 → 4 (GLPI depends on Active Directory being in place).
+
+**Scripts:** [`New-Employee.ps1`](scripts/New-Employee.ps1) · [`Import-Employees.ps1`](scripts/Import-Employees.ps1) · [`Disable-Employee.ps1`](scripts/Disable-Employee.ps1)
 
 ---
 
 ## Documentation
 
 - [Lab setup guide](docs/01-lab-setup.md): how the environment was built, step by step
-- [Active Directory](docs/02-active-directory.md): OU design, security groups, and employee onboarding
+- [Active Directory](docs/02-active-directory.md): OU design, security groups, onboarding/offboarding automation, Group Policy, and shared folder permissions
 - [Troubleshooting log](docs/troubleshooting-log.md): problems I hit and how I fixed them
 
 ---
@@ -63,7 +69,11 @@ flowchart LR
 - Joining a Windows 11 client to a domain
 - Designing an OU structure and role-based security groups
 - Onboarding users in Active Directory Users and Computers and verifying access with `whoami /groups`
-- Troubleshooting with `systeminfo`, `bcdedit`, `nslookup`, and Event Viewer
+- PowerShell automation with input validation: single and bulk (CSV) onboarding, offboarding
+- Group Policy: creating and linking a GPO, verifying with `gpupdate` and `gpresult`
+- File share and NTFS permissions with group-based access (least privilege)
+- Help desk tasks: password resets, account unlocks, access-denied troubleshooting
+- Troubleshooting with `systeminfo`, `bcdedit`, `nslookup`, `gpresult`, and Event Viewer
 
 ---
 
