@@ -2,7 +2,7 @@
 
 A home lab that simulates the IT environment of a small company. I build and run it the way a help desk / IT support team would: a Windows domain, employee accounts, a ticketing system, automation with PowerShell, and documented troubleshooting.
 
-> **Status:** Lab setup and Active Directory phases complete. GLPI service desk next.
+> **Status:** Lab setup and Active Directory complete. GLPI service desk installed and connected to Active Directory; ticket categories and SLAs next.
 
 ---
 
@@ -12,21 +12,23 @@ A home lab that simulates the IT environment of a small company. I build and run
 flowchart LR
     subgraph Laptop["Host laptop · VirtualBox 7.2"]
         subgraph LabNet["LabNet · 10.0.2.0/24"]
-            DC01["DC01<br/>Windows Server 2025<br/>10.0.2.10 (static)<br/>AD DS + DNS"]
+            DC01["DC01<br/>Windows Server 2025<br/>10.0.2.10 (static)<br/>AD DS + DNS + file share"]
             CLIENT01["CLIENT01<br/>Windows 11 Enterprise<br/>DHCP · DNS → DC01"]
+            GLPI01["GLPI01<br/>Ubuntu Server 26.04<br/>10.0.2.20 (static)<br/>Docker · GLPI 12"]
             GW["Gateway<br/>10.0.2.1"]
         end
     end
     CLIENT01 <-- "logins + DNS" --> DC01
-    DC01 --> GW
-    CLIENT01 --> GW
+    CLIENT01 -- "help desk (HTTP)" --> GLPI01
+    GLPI01 -- "LDAP" --> DC01
     GW --> Internet((Internet))
 ```
 
 | Machine | Role | OS | Network |
 |---|---|---|---|
-| **DC01** | Domain controller, DNS server | Windows Server 2025 Standard (Eval) | Static IP `10.0.2.10` |
+| **DC01** | Domain controller, DNS, HR file share | Windows Server 2025 Standard (Eval) | Static IP `10.0.2.10` |
 | **CLIENT01** | Employee workstation, domain-joined | Windows 11 Enterprise (Eval) | DHCP, DNS → `10.0.2.10` |
+| **GLPI01** | Help desk (GLPI 12 + MySQL in Docker) | Ubuntu Server 26.04.1 LTS | Static IP `10.0.2.20` |
 
 - **Domain:** `lab.local` (NetBIOS: `LAB`)
 - **Hypervisor:** Oracle VirtualBox 7.2.4 on Windows 11
@@ -39,7 +41,7 @@ flowchart LR
 | Phase | Description | Status |
 |---|---|---|
 | 0 | [Lab setup](docs/01-lab-setup.md): VMs, network, domain controller, domain join | ✅ Done |
-| 1 | GLPI service desk: ticket categories, priorities, SLAs, knowledge base | ⬜ Planned |
+| 1 | [GLPI service desk](docs/03-glpi.md): install, secure, connect to AD, categories, SLAs, knowledge base | 🔄 In progress |
 | 2 | [Active Directory](docs/02-active-directory.md): OUs, groups, PowerShell onboarding/offboarding, Group Policy, shared folder permissions | ✅ Done |
 | 3 | Ticket-driven operations: realistic tickets worked end to end | ⬜ Planned |
 | 4 | Backup, failure & restore: measured recovery against a target time | ⬜ Planned |
@@ -56,6 +58,7 @@ Build order: 0 → 2 → 1 → 3 → 5 → 6 → 4 (GLPI depends on Active Direc
 
 - [Lab setup guide](docs/01-lab-setup.md): how the environment was built, step by step
 - [Active Directory](docs/02-active-directory.md): OU design, security groups, onboarding/offboarding automation, Group Policy, and shared folder permissions
+- [GLPI service desk](docs/03-glpi.md): Linux server, Docker deployment, securing defaults, and AD integration over LDAP
 - [Troubleshooting log](docs/troubleshooting-log.md): problems I hit and how I fixed them
 
 ---
@@ -73,7 +76,17 @@ Build order: 0 → 2 → 1 → 3 → 5 → 6 → 4 (GLPI depends on Active Direc
 - Group Policy: creating and linking a GPO, verifying with `gpupdate` and `gpresult`
 - File share and NTFS permissions with group-based access (least privilege)
 - Help desk tasks: password resets, account unlocks, access-denied troubleshooting
-- Troubleshooting with `systeminfo`, `bcdedit`, `nslookup`, `gpresult`, and Event Viewer
+- Ubuntu Server administration: static networking, apt, SSH, systemd services, file ownership
+- Docker and Docker Compose: multi-container deployment, volumes, health checks, logs
+- GLPI administration: securing default accounts, bulk user updates, LDAP/AD integration with a service account and LDAP filters
+- Troubleshooting with `systeminfo`, `bcdedit`, `nslookup`, `gpresult`, `ssh`, `docker compose logs`, and Event Viewer
+
+---
+
+## Known limitations
+
+- GLPI runs over **HTTP**, and GLPI's LDAP connection to DC01 is **unencrypted** (LDAP signing relaxed on the DC). This is acceptable only inside an isolated lab. **HTTPS and LDAPS with certificates from an internal AD Certificate Services CA are planned.**
+- The HR file share is hosted on the domain controller for simplicity; a real company would use a separate file server.
 
 ---
 
