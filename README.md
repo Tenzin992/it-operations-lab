@@ -2,7 +2,7 @@
 
 A home lab that simulates the IT environment of a small company. I build and run it the way a help desk / IT support team would: a Windows domain, employee accounts, a ticketing system, automation with PowerShell, and documented troubleshooting.
 
-> **Status:** Lab setup and Active Directory complete. GLPI service desk installed and connected to Active Directory; ticket categories and SLAs next.
+> **Status:** Lab setup and Active Directory complete. GLPI service desk is running with AD logins, ticket categories, automatic SLAs, a knowledge base, and the first ticket worked end to end.
 
 ---
 
@@ -79,6 +79,7 @@ Build order: 0 → 2 → 1 → 3 → 5 → 6 → 4 (GLPI depends on Active Direc
 - Ubuntu Server administration: static networking, apt, SSH, systemd services, file ownership
 - Docker and Docker Compose: multi-container deployment, volumes, health checks, logs
 - GLPI administration: securing default accounts, bulk user updates, LDAP/AD integration with a service account and LDAP filters
+- ITSM basics: ticket categories, incidents vs requests, SLAs (time to own / time to resolve), business rules, ticket lifecycle, knowledge base articles
 - Troubleshooting with `systeminfo`, `bcdedit`, `nslookup`, `gpresult`, `ssh`, `docker compose logs`, and Event Viewer
 
 ---
