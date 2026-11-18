@@ -128,9 +128,11 @@ docker compose up -d
 
 **Diagnosis:** the VM's virtual CPU wasn't getting real CPU time from the laptop. Three VMs were running at once on top of Hyper-V, and Windows **Energy Saver** was throttling the CPU on battery.
 
-**Fix / mitigation:** powered GLPI01 off and on (the containers restarted automatically thanks to `restart: unless-stopped`), kept the laptop plugged in with Energy Saver off, and closed other apps. If it recurs, reduce GLPI01 to 1 vCPU.
+**First mitigation:** powered GLPI01 off and on (the containers restarted automatically thanks to `restart: unless-stopped`), kept the laptop plugged in with Energy Saver off, and closed other apps. The lockups kept returning (up to 248 seconds), and the kernel messages showed `ncpus=2`.
 
-**Lesson:** an "app is down" ticket can be caused by the host underneath. Check the server's own logs before changing the app.
+**Final fix:** with GLPI01 powered off, set **Processors: 1** and **Paravirtualization Interface: None** (*Settings → System → Acceleration*). By default VirtualBox presents a KVM paravirtualization interface to Linux, but on this laptop VirtualBox itself runs on top of Hyper-V. That mismatch disrupted the Linux kernel's timekeeping and produced false "stuck CPU" reports. After the change, no more lockups.
+
+**Lesson:** an "app is down" ticket can be caused by the host underneath. Check the server's own logs before changing the app, and remember that a symptom that looks like "not enough CPU" can actually be a timing problem between the guest and the hypervisor.
 
 ---
 
@@ -192,7 +194,9 @@ The original typo was in the disabled-account part.
 
 ---
 
-## 15. Small command-line gotchas
+## 15. Small command-line and GLPI gotchas
 
 - **`glpi` rejected at GLPI01's Linux login:** `glpi` is the GLPI *website* account; the Linux server account is `labadmin`. Different systems, different accounts.
+- **GLPI admin login "incorrect username or password":** the login page remembered **LabCorp AD** from Jane's last login. The `glpi` account only exists in GLPI, so the login source must be **GLPI internal database**.
+- **Business rule action picked the wrong field:** "Actions - Time to resolve" with **Delete** would have *cleared* the deadline instead of setting it. The correct action was **SLA Time to resolve → Assign**. Two options with similar names can do opposite things, so read before saving.
 - **`There are no commands defined in the "glpi:ldap" namespace`:** the command was renamed in GLPI 12. Found the current name with `php bin/console list ldap` (`ldap:sync`) and checked its options with `--help` before running it.

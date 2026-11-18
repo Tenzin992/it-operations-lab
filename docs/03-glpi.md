@@ -2,7 +2,7 @@
 
 **Goal:** give LabCorp a help desk where employees submit tickets and IT tracks them, running on its own Linux server and using the company's Active Directory accounts for login.
 
-**Status:** GLPI installed, secured, and connected to Active Directory. Ticket categories, SLAs, and knowledge base are next.
+**Status:** GLPI installed, secured, and connected to Active Directory. Ticket categories, Medium-priority SLAs with an automatic business rule, the first ticket worked end to end, and the first knowledge base article are done. High/Low SLAs are next.
 
 > **Known limitation:** GLPI (HTTP) and the LDAP connection to DC01 (port 389, signing relaxed) are currently **unencrypted**. This is acceptable only because the lab is an isolated private network with fictional accounts. HTTPS for GLPI and LDAPS for AD, using certificates from an internal AD Certificate Services CA, are planned.
 
@@ -206,6 +206,104 @@ Signed in to GLPI as **`jsmith`** with her Windows password. GLPI checked the pa
 
 ![Jane's self-service portal](../screenshots/p1-04-jsmith-self-service.png)
 
+**Two login sources:** the GLPI admin account (`glpi`) exists only in GLPI, so it signs in with **GLPI internal database**. Employees sign in with **LabCorp AD**.
+
+---
+
+## 7. Ticket categories
+
+*Setup → Dropdowns → ITIL categories*
+
+Categories decide **who handles a ticket** (routing) and let IT report on **what breaks most often**. They're also the labels the planned ML ticket classifier would learn to predict.
+
+| Category | Examples |
+|---|---|
+| Account & Access | Password reset, account locked, new hire, offboarding |
+| File Shares & Permissions | Can't open a shared folder, access request |
+| Network & Connectivity | No internet, DNS problems |
+| Hardware | Laptop, monitor, keyboard |
+| Software | Install request, app crashing |
+| Printing | Printer offline, stuck jobs |
+| Email | Can't send or receive |
+| Other | Anything else |
+
+![ITIL categories](../screenshots/p1-05-itil-categories.png)
+
+---
+
+## 8. SLAs and an automatic business rule
+
+An **SLA (Service Level Agreement)** is IT's promise about response speed. GLPI tracks two timers per ticket:
+- **Time to own (TTO):** how fast a technician takes the ticket
+- **Time to resolve (TTR):** how fast it's fixed
+
+*Setup → Service levels → **LabCorp Standard*** (24/7 calendar)
+
+| SLA | Type | Target |
+|---|---|---|
+| Medium - Time to own | Time to own | 4 hours |
+| Medium - Time to resolve | Time to resolve | 8 hours |
+
+A **business rule** attaches the SLAs automatically to every new ticket:
+
+*Administration → Rules → Business rules for tickets → **Apply Medium SLA***
+
+| Part | Setting |
+|---|---|
+| Use rule for | Add (new tickets) |
+| Criteria | Priority **is** Medium |
+| Actions | SLA Time to own → **Assign** → Medium - Time to own<br>SLA Time to resolve → **Assign** → Medium - Time to resolve |
+
+GLPI calculates **priority** from **urgency × impact**, and both default to Medium, so a normal employee ticket triggers this rule.
+
+![SLA business rule](../screenshots/p1-06-sla-rule.png)
+
+**Verified:** ticket #1 opened at 00:42 and received a Time to resolve of **08:42**, exactly 8 hours later, with nobody setting it by hand.
+
+![Ticket list showing the SLA deadline](../screenshots/p1-08-ticket-list-sla.png)
+
+*Note: GLPI shows times in UTC (the server default). Setting the office timezone and a business-hours calendar are planned improvements.*
+
+---
+
+## 9. First ticket, worked end to end (INC-001)
+
+| | |
+|---|---|
+| **Ticket** | #1 "Screen locks too quickly" |
+| **Requester** | Jane Smith (`jsmith`, HR), via *Report an issue* (Incident) |
+| **Category** | Account & Access (chosen by Jane) |
+| **Priority** | Medium → SLA applied automatically |
+| **Technician** | `glpi` (assigned myself; status New → Processing) |
+
+**User's report:** *"My computer locks every time I step away for about 5 minutes and I have to sign in again. Can this be turned off?"*
+
+**Investigation:** nothing was broken. The lock comes from the **Workstation Screen Lock GPO** (Phase 2), which sets a 300-second inactivity limit on all workstations. The ticket was really a request to change a security policy.
+
+**Follow-up to the user:** explained that the 5-minute lock is a company security policy that protects her account and data, that locking doesn't close her work, and that she can lock manually with **Windows + L**.
+
+**Solution (for the record):** *User requested disabling the screen lock. Explained that the 5-minute inactivity lock is enforced by the "Workstation Screen Lock" GPO for security. No change made. Advised using Windows + L to lock manually.*
+
+**Closure:** Jane approved the solution, and the ticket closed.
+
+**Lifecycle:** New → Processing (assigned) → Solved → Closed
+
+![Ticket 1 closed](../screenshots/p1-09-ticket-1-closed.png)
+
+---
+
+## 10. Knowledge base article
+
+Turned ticket #1 into a self-help article so the next employee can find the answer without opening a ticket (**ticket deflection**).
+
+*Tools → Knowledge base → Add → "Why does my computer lock after 5 minutes?"* → ⋮ → **Add to FAQ**
+
+Verified as Jane: the article appears in her **FAQ** menu.
+
+![KB article in Jane's FAQ](../screenshots/p1-10-kb-article.png)
+
+I left **Share → Publish to web** off, because it would make the article readable by anyone with the link, without logging in.
+
 ---
 
 ## What I learned
@@ -216,11 +314,13 @@ Before doing anything else in GLPI, I removed the default access: changed the ad
 
 The LDAP filter mattered more than I expected. Without it, the first sync imported groups and offboarded employees as if they were people. "Success, 15 imported" only looked wrong because I knew the right number was 8. When the full filter then failed with a syntax error, I tested it one piece at a time (11 → 10 → 8 entries) until I found the problem. I also learned that a changing error code means progress: error 49 meant the account didn't exist (two commands had been pasted as one line), and error 8 meant Windows Server 2025 requires signed LDAP, which I relaxed for the lab and plan to replace with LDAPS. The biggest habit from this phase: always verify the result instead of trusting that no error means it worked.
 
+Working the first ticket showed me how the pieces connect. Categories route tickets and show trends; SLAs turn "be fast" into measurable deadlines; and a business rule applies them automatically, which I confirmed when ticket #1 got a resolve deadline exactly 8 hours after it opened. Jane reported an incident, but nothing was broken: it was a security policy working as intended. So the right answer was explaining the reason and offering an alternative, not changing the setting. I learned the difference between a follow-up (part of the conversation) and a solution (the final answer that moves the ticket to Solved and that other technicians can search later). Then I turned the answer into a knowledge base article, so the next person with the same question can help themselves.
+
 ---
 
 ## Next
 
-- Ticket categories, priorities, and SLAs for LabCorp
-- Knowledge base articles
-- First tickets submitted by employees (Phase 3)
+- High and Low priority SLAs, each with its own business rule
+- More realistic tickets (Phase 3): locked-out account, Finance folder access request, DNS problem
+- Later: office timezone and a business-hours calendar for SLAs
 - Later: HTTPS for GLPI and LDAPS for AD with AD Certificate Services
